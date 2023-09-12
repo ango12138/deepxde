@@ -231,3 +231,31 @@ def mpi_scatter_from_rank0(array, drop_last=True):
     ]  # We truncate array size to be a multiple of num_split to prevent a MPI error.
     config.comm.Scatter(array, array_split, root=0)
     return array_split
+
+
+def split_in_rank(array, drop_last=True):
+    """Split given array into continuous subarray according to world size and rank.
+
+    Args:
+        array (array or Tensor): Array to be split.
+        drop_last (bool): Whether to discard the remainder samples
+            not divisible by world_size. Default: True.
+
+    Returns:
+        array or Tensor: Split array or Tensor.
+    """
+    # TODO: support drop_last=False
+    if not drop_last:
+        raise ValueError("Only support drop_last=True now.")
+
+    if config.world_size <= 1:
+        return array
+
+    n_total = len(array)
+    if n_total < config.world_size:
+        return array
+
+    n_split = n_total // config.world_size
+    beg = n_split * config.rank
+    end = n_split * (config.rank + 1)
+    return array[beg: end]

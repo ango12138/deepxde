@@ -53,6 +53,20 @@ elif backend_name == "jax":
     xla_jit = True
 if xla_jit:
     print("Enable just-in-time compilation with XLA.\n")
+# Data parallel via paddle.distributed
+world_size = 1
+rank = 0
+if backend_name == "paddle":
+    world_size = paddle.distributed.get_world_size()
+    if world_size > 1:
+        paddle.distributed.fleet.init(is_collective=True)
+        rank = paddle.distributed.get_rank()
+        random_seed = 42
+        random.seed(random_seed)
+        np.random.seed(random_seed)
+        paddle.seed(random_seed)
+        print(f"\nParallel training with {world_size} processes.\n")
+        print("\nSet random seed to 42 for correct data split in each procesor.\n")
 
 
 def default_float():

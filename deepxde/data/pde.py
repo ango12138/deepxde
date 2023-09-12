@@ -4,7 +4,7 @@ from .data import Data
 from .. import backend as bkd
 from .. import config
 from ..backend import backend_name
-from ..utils import get_num_args, run_if_all_none, mpi_scatter_from_rank0
+from ..utils import get_num_args, run_if_all_none, mpi_scatter_from_rank0, split_in_rank
 
 
 class PDE(Data):
@@ -163,6 +163,7 @@ class PDE(Data):
         losses = [
             loss_fn[i](bkd.zeros_like(error), error) for i, error in enumerate(error_f)
         ]
+
         for i, bc in enumerate(self.bcs):
             beg, end = bcs_start[i], bcs_start[i + 1]
             # The same BC points are used for training and testing.
@@ -188,7 +189,7 @@ class PDE(Data):
         if config.parallel_scaling == "strong":
             self.train_x_all = mpi_scatter_from_rank0(self.train_x_all)
         if self.pde is not None:
-            self.train_x = np.vstack((self.train_x, self.train_x_all))
+            self.train_x = np.vstack((self.train_x, split_in_rank(self.train_x_all)))
         self.train_y = self.soln(self.train_x) if self.soln else None
         if self.auxiliary_var_fn is not None:
             self.train_aux_vars = self.auxiliary_var_fn(self.train_x).astype(
@@ -228,7 +229,7 @@ class PDE(Data):
         self.train_x_all = np.vstack((anchors, self.train_x_all))
         self.train_x = self.bc_points()
         if self.pde is not None:
-            self.train_x = np.vstack((self.train_x, self.train_x_all))
+            self.train_x = np.vstack((self.train_x, split_in_rank(self.train_x_all)))
         self.train_y = self.soln(self.train_x) if self.soln else None
         if self.auxiliary_var_fn is not None:
             self.train_aux_vars = self.auxiliary_var_fn(self.train_x).astype(
